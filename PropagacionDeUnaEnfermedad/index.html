@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+  <meta name="description" content="EpiDynamics 6.0: laboratorio virtual 3D de propagación de enfermedades. Agentes animados, patógenos en 3D, modelos SIR/SIS/SEIR/SIRD/SEIRD con RK4 explicados paso a paso. Matemáticas IV.">
+  <meta name="theme-color" content="#070b14">
+  <title>EpiDynamics 6.0 · Laboratorio Virtual de Epidemias</title>
+
+  <!-- KaTeX para fórmulas (si no hay conexión se muestra un respaldo en texto) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css" crossorigin="anonymous">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js" crossorigin="anonymous"></script>
+
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/lab.css">
+</head>
+<body class="v6">
+
+  <!-- ===================== Encabezado y navegación por módulos ===================== -->
+  <header class="app-header">
+    <div class="header-container">
+      <button class="brand-section" data-module-go="home" title="Inicio">
+        <span class="brand-logo">🦠</span>
+        <span class="brand-text"><span class="brand-title">EpiDynamics</span><span class="brand-ver">6.0</span></span>
+      </button>
+      <nav class="module-nav" aria-label="Módulos">
+        <button data-module="home"><span>🏠</span><em>Inicio</em></button>
+        <button data-module="diseases"><span>🦠</span><em>Enfermedades</em></button>
+        <button data-module="sim"><span>🏙️</span><em>Simulación 3D</em></button>
+        <button data-module="map"><span>🗺️</span><em>Mapa 2D</em></button>
+        <button data-module="models"><span>📐</span><em>Modelos</em></button>
+        <button data-module="charts"><span>📈</span><em>Gráficas</em></button>
+        <button data-module="compare"><span>⚖️</span><em>EDO vs agentes</em></button>
+        <button data-module="learn" class="nav-learn"><span>🎓</span><em>Aprender</em></button>
+      </nav>
+      <div class="header-actions">
+        <button id="btn-export-csv" class="btn-header" title="Descargar la solución determinista (EDO/RK4) en CSV">📥 <span class="hide-mobile">EDO</span></button>
+        <button id="btn-export-agents" class="btn-header" title="Descargar la serie estocástica de los agentes en CSV">📥 <span class="hide-mobile">Agentes</span></button>
+        <button id="btn-theme-toggle" class="btn-header" title="Alternar modo oscuro / claro">☀️</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ===================== Barra de contexto: enfermedad + reproducción ===================== -->
+  <div class="context-bar" id="context-bar">
+    <button class="ctx-disease" data-module-go="diseases" title="Cambiar de enfermedad">
+      <img id="ctx-thumb" alt="" width="44" height="32">
+      <span><b id="ctx-name">—</b><small><span id="disease-badge" class="badge-tag">Modelo</span> <span id="lab-mechanism" class="ctx-mech">—</span></small></span>
+      <span class="ctx-change">Cambiar ▾</span>
+    </button>
+    <div class="ctx-play">
+      <button id="btn-play-pause" class="btn-sim btn-primary-sim" title="Iniciar / pausar (Espacio)"><span>▶️</span> Iniciar</button>
+      <button id="btn-step-day" class="btn-sim" title="Avanzar 1 día (→)">⏩ <span class="hide-mobile">+1 día</span></button>
+      <button id="btn-reset" class="btn-sim" title="Reiniciar simulación">🔄</button>
+      <div class="speed-selector" title="Velocidad de la simulación">
+        <button class="btn-speed" data-speed="0.05" title="≈ tiempo real: caminar natural">🐢</button>
+        <button class="btn-speed" data-speed="0.2" title="Cámara lenta">0.2x</button>
+        <button class="btn-speed active" data-speed="1.0" title="1 día = 30 s">1x</button>
+        <button class="btn-speed" data-speed="5.0">5x</button>
+        <button class="btn-speed" data-speed="20.0">20x</button>
+        <button class="btn-speed" data-speed="60.0" title="1 día = 0,5 s">60x</button>
+      </div>
+    </div>
+    <div class="ctx-kpis">
+      <span title="Día de la simulación"><small>Día</small><b id="kpi-day">0</b></span>
+      <span class="k-i" title="Infectados activos (agentes)"><small>Infectados</small><b id="kpi-active-infected">0</b></span>
+    </div>
+  </div>
+
+  <main class="main-content">
+
+    <!-- ===================== INICIO ===================== -->
+    <section class="module" id="mod-home" data-module-panel="home">
+      <div class="hero">
+        <div class="hero-text">
+          <span class="hero-kicker">Matemáticas IV · Ecuaciones diferenciales y sistemas dinámicos</span>
+          <h1>Laboratorio virtual de <span class="grad">propagación de enfermedades</span></h1>
+          <p>Observa una ciudad viva de cientos de personas, elige un patógeno real y mira cómo un solo caso se convierte en una epidemia. Después, conecta lo que ves con las ecuaciones <b>SIR, SEIR y SEIRD</b> y el método numérico <b>Runge–Kutta 4</b>.</p>
+          <div class="hero-cta">
+            <button class="cta primary" data-module-go="learn">🎓 Aprender la epidemia <small>Recorrido guiado de 10 pasos</small></button>
+            <button class="cta" data-module-go="sim">🏙️ Explorar la ciudad <small>Simulación 3D libre</small></button>
+            <button class="cta" data-module-go="diseases">🦠 Ver patógenos <small>15 enfermedades</small></button>
+          </div>
+        </div>
+        <div class="hero-mosaic" id="hero-mosaic"></div>
+      </div>
+      <div class="home-cards">
+        <div class="home-card"><span>👥</span><h4>Agentes individuales</h4><p>Cada persona tiene rutina, hogar, contactos e historial clínico. El contagio se decide con probabilidades calibradas con R₀.</p></div>
+        <div class="home-card"><span>📐</span><h4>Modelos deterministas</h4><p>Las EDO se resuelven con RK4. Cada ecuación se explica con sus variables, unidades y un procedimiento paso a paso.</p></div>
+        <div class="home-card"><span>🧬</span><h4>4 mecanismos reales</h4><p>Gotículas y aerosoles, contacto directo, mosquitos vectores y agua contaminada: cada enfermedad se transmite como en la realidad.</p></div>
+        <div class="home-card"><span>⚖️</span><h4>Estocástico vs determinista</h4><p>Compara siempre por separado la realización aleatoria de los agentes con la solución promedio de la EDO.</p></div>
+      </div>
+    </section>
+
+    <!-- ===================== ENFERMEDADES ===================== -->
+    <section class="module" id="mod-diseases" data-module-panel="diseases">
+      <div class="module-head">
+        <h2>🦠 Laboratorio de enfermedades</h2>
+        <p>Selecciona una tarjeta para ver el patógeno en 3D, su biología y su mecanismo de transmisión. Los parámetros provienen del catálogo original (OMS / CDC).</p>
+      </div>
+      <div id="gallery" class="gallery"></div>
+      <details class="panel-details">
+        <summary>⚡ Selector rápido (lista clásica)</summary>
+        <nav class="categories-bar"><div class="categories-container" id="category-pills"></div></nav>
+        <div class="select-wrapper">
+          <label for="disease-select" class="select-label">Seleccionar patógeno / enfermedad</label>
+          <select id="disease-select" class="disease-select"></select>
+        </div>
+        <div class="disease-info-chips">
+          <div class="info-chip"><span>Patógeno: </span><strong id="disease-pathogen">-</strong></div>
+          <div class="info-chip"><span>Transmisión: </span><strong id="disease-transmission">-</strong></div>
+        </div>
+      </details>
+      <details class="panel-details" open>
+        <summary>🩺 Ficha médica de la enfermedad seleccionada</summary>
+        <div id="clinical-info-container"></div>
+      </details>
+      <details class="panel-details">
+        <summary>🔬 Tabla comparativa de las 15 enfermedades</summary>
+        <div class="compare-container">
+          <table class="compare-table">
+            <thead><tr><th>Enfermedad</th><th>Categoría</th><th>Modelo EDO</th><th>R₀</th><th>Incubación</th><th>Infeccioso</th><th>Letalidad</th><th>Inmunidad de rebaño</th><th>Acción</th></tr></thead>
+            <tbody id="compare-table-body"></tbody>
+          </table>
+        </div>
+      </details>
+    </section>
+
+    <!-- ===================== SIMULACIÓN 3D ===================== -->
+    <section class="module" id="mod-sim" data-module-panel="sim">
+      <div class="sim-layout">
+        <!-- Panel de parámetros (desplegable) -->
+        <aside class="param-drawer" id="param-drawer">
+          <div class="drawer-head"><b>⚙️ Parámetros</b><button class="drawer-x" data-drawer-toggle title="Ocultar panel">◀</button></div>
+
+          <details class="pgroup" open>
+            <summary>🧬 Modelo y enfermedad</summary>
+            <div class="control-group">
+              <div class="control-header"><label for="select-model-type" class="control-label" title="Sistema de ecuaciones diferenciales que se resuelve">Modelo matemático</label>
+                <select id="select-model-type" class="btn-pill-small"><option value="SIR">SIR</option><option value="SEIR">SEIR</option><option value="SIRD">SIRD</option><option value="SEIRD" selected>SEIRD</option><option value="SIS">SIS</option></select></div>
+            </div>
+            <div class="control-group">
+              <div class="control-header"><label for="slider-r0" class="control-label" title="Contagios promedio de un caso en población susceptible. β = R₀(γ+μ)">R₀ · número reproductivo <i class="hint">?</i></label><span class="control-value" id="val-r0">2.5</span></div>
+              <input type="range" id="slider-r0" class="slider-input" min="0.5" max="18.0" step="0.1" value="2.5">
+            </div>
+            <div class="control-group">
+              <div class="control-header"><label for="slider-incubation" class="control-label" title="Días que pasan en E antes de contagiar. σ = 1/incubación">Incubación 1/σ <i class="hint">?</i></label><span class="control-value" id="val-incubation">4 d</span></div>
+              <input type="range" id="slider-incubation" class="slider-input" min="1" max="30" step="0.5" value="4">
+            </div>
+            <div class="control-group">
+              <div class="control-header"><label for="slider-infectious" class="control-label" title="Días que una persona contagia. γ = 1/periodo infeccioso">Periodo infeccioso 1/γ <i class="hint">?</i></label><span class="control-value" id="val-infectious">7 d</span></div>
+              <input type="range" id="slider-infectious" class="slider-input" min="1" max="40" step="0.5" value="7">
+            </div>
+            <div class="control-group">
+              <div class="control-header"><label for="slider-fatality" class="control-label" title="Fracción de casos que fallece. μ = CFR·γ">Letalidad (CFR) <i class="hint">?</i></label><span class="control-value" id="val-fatality">2.00%</span></div>
+              <input type="range" id="slider-fatality" class="slider-input" min="0" max="60" step="0.1" value="2.0">
+            </div>
+            <div class="control-group">
+              <div class="control-header"><label for="slider-hospital" class="control-label" title="Camas disponibles como % de la población. Si se supera, la letalidad aumenta">Capacidad hospitalaria <i class="hint">?</i></label><span class="control-value" id="val-hospital">5.0%</span></div>
+              <input type="range" id="slider-hospital" class="slider-input" min="0.5" max="20" step="0.5" value="5">
+            </div>
+          </details>
+
+          <details class="pgroup">
+            <summary>👥 Población simulada</summary>
+            <div class="control-group">
+              <div class="control-header"><label for="slider-agents" class="control-label">Personas en la ciudad</label><span class="control-value" id="val-agents">300 personas</span></div>
+              <input type="range" id="slider-agents" class="slider-input" min="100" max="800" step="50" value="300">
+            </div>
+            <div class="control-group">
+              <div class="control-header"><label for="slider-seeds" class="control-label">Casos iniciales</label><span class="control-value" id="val-seeds">6</span></div>
+              <input type="range" id="slider-seeds" class="slider-input" min="1" max="20" step="1" value="6">
+            </div>
+            <button id="btn-new-seed" class="btn-sim btn-block" title="Repetir el experimento con otro azar">🎲 Nueva realización aleatoria</button>
+            <div class="row-btns">
+              <button id="btn-trigger-outbreak" class="btn-sim" title="Infectar a 5 personas al azar">💥 Brote +5</button>
+              <button id="btn-vaccinate-cluster" class="btn-sim" title="Vacunar al 25 % de los susceptibles">💉 Vacunar 25 %</button>
+            </div>
+          </details>
+
+          <details class="pgroup">
+            <summary>🛡️ Políticas (EDO + agentes)</summary>
+            <label class="checkbox-label"><input type="checkbox" id="check-quarantine"><span>Confinamiento / cuarentena</span></label>
+            <div class="control-group">
+              <div class="control-header"><label for="slider-quarantine-day" class="control-label">Día de inicio</label><span class="control-value" id="val-quarantine-day">Día 20</span></div>
+              <input type="range" id="slider-quarantine-day" class="slider-input" min="1" max="90" step="1" value="20">
+            </div>
+            <div class="control-group">
+              <div class="control-header"><label for="slider-quarantine-efficacy" class="control-label" title="En la EDO reduce β; en los agentes, esa fracción se queda en casa">Reducción de contactos</label><span class="control-value" id="val-quarantine-efficacy">60%</span></div>
+              <input type="range" id="slider-quarantine-efficacy" class="slider-input" min="0.1" max="0.9" step="0.05" value="0.6">
+            </div>
+            <div class="control-group">
+              <div class="control-header"><label for="slider-vaccination" class="control-label" title="Término −ν·S en la EDO">Vacunación diaria ν</label><span class="control-value" id="val-vaccination">0% / día</span></div>
+              <input type="range" id="slider-vaccination" class="slider-input" min="0" max="2.0" step="0.05" value="0">
+            </div>
+          </details>
+
+          <details class="pgroup">
+            <summary>🧍 Medidas individuales <span class="badge-tag" title="No existen en la EDO">sólo agentes</span></summary>
+            <div class="control-group">
+              <div class="control-header"><label for="slider-social-distancing" class="control-label" title="Evitan salidas no esenciales y mantienen ≥ 2 m">Distanciamiento social</label><span class="control-value" id="val-social-distancing">0%</span></div>
+              <input type="range" id="slider-social-distancing" class="slider-input" min="0" max="90" step="5" value="0">
+            </div>
+            <div class="control-group">
+              <div class="control-header"><label for="slider-masks" class="control-label" title="Reduce la emisión 50 % y la inhalación 40 %">Uso de mascarillas</label><span class="control-value" id="val-masks">0%</span></div>
+              <input type="range" id="slider-masks" class="slider-input" min="0" max="100" step="5" value="0">
+            </div>
+            <div class="control-group">
+              <div class="control-header"><label for="slider-isolation" class="control-label">Aislamiento de sintomáticos</label><span class="control-value" id="val-isolation">0%</span></div>
+              <input type="range" id="slider-isolation" class="slider-input" min="0" max="100" step="5" value="0">
+            </div>
+            <div class="control-group" data-mech="respiratory">
+              <div class="control-header"><label for="slider-ventilation" class="control-label" title="Reduce los aerosoles acumulados en interiores">Ventilación de interiores</label><span class="control-value" id="val-ventilation">0%</span></div>
+              <input type="range" id="slider-ventilation" class="slider-input" min="0" max="90" step="5" value="0">
+            </div>
+            <div class="control-group" data-mech="vector">
+              <div class="control-header"><label for="slider-vector" class="control-label" title="Reduce la población de mosquitos">Control de criaderos / fumigación</label><span class="control-value" id="val-vector">0%</span></div>
+              <input type="range" id="slider-vector" class="slider-input" min="0" max="90" step="5" value="0">
+            </div>
+            <div class="control-group" data-mech="water">
+              <div class="control-header"><label for="slider-water" class="control-label" title="Reduce la probabilidad de contagio por beber">Potabilización / cloración</label><span class="control-value" id="val-water">0%</span></div>
+              <input type="range" id="slider-water" class="slider-input" min="0" max="95" step="5" value="0">
+            </div>
+          </details>
+        </aside>
+
+        <div class="sim-stage">
+          <div class="lab-viewport" id="lab-viewport" data-tool="select">
+            <button class="drawer-open" data-drawer-toggle title="Mostrar parámetros">⚙️ Parámetros</button>
+            <div id="lab-hud" class="lab-hud"></div>
+
+            <!-- Herramientas -->
+            <div class="vp-tools seg" role="toolbar" aria-label="Herramienta del puntero">
+              <button data-tool="select" class="active" title="Clic sobre una persona: ver su ficha">🔍<em>Seleccionar</em></button>
+              <button data-tool="infect" title="Clic: infectar a una persona (o brote en un lugar)">🦠<em>Infectar</em></button>
+              <button data-tool="vaccinate" title="Clic: vacunar a una persona susceptible">💉<em>Vacunar</em></button>
+              <button data-tool="cure" title="Clic: tratar a un infectado">💊<em>Tratar</em></button>
+              <button data-tool="outbreak" title="Clic en el suelo: brote de 5 casos alrededor">💥<em>Brote</em></button>
+            </div>
+
+            <!-- Cámara cinematográfica -->
+            <div class="cam-dock">
+              <button data-cam="overview" title="Vista general">🏙️</button>
+              <button data-cam="aerial" title="Vista aérea: analizar la propagación">🛰️</button>
+              <button data-cam="street" title="A pie de calle">🚶</button>
+              <button data-cam="close" title="Primer plano de la persona seleccionada (síntomas)">🔍</button>
+              <button data-cam="follow" title="Seguir a la persona seleccionada">🎥</button>
+              <button data-layers-toggle title="Capas visuales">🗂️</button>
+              <button id="btn-explain-next" title="Pausar y explicar el próximo contagio">🔎</button>
+            </div>
+            <div class="layers-pop" id="layers-pop">
+              <div class="lp-title">Capas visuales</div>
+              <label title="Enfoca automáticamente cada nuevo contagio (con un breve ralentí)"><input type="checkbox" id="tg-contagion-cam"> 📸 Cámara de contagios</label>
+              <label><input type="checkbox" id="tg-fx" checked> ✨ Efectos de transmisión</label>
+              <label><input type="checkbox" id="tg-aerosols" checked> 🌫️ Aerosoles en interiores</label>
+              <label><input type="checkbox" id="tg-zones" checked> ⭕ Zonas de contagio</label>
+              <label><input type="checkbox" id="tg-chains" checked> 🔗 Cadenas de contagio</label>
+              <label><input type="checkbox" id="tg-contacts" checked> 👥 Contactos del seleccionado</label>
+              <label><input type="checkbox" id="tg-icons" checked> 🏷️ Iconos de estado</label>
+              <label><input type="checkbox" id="tg-labels" checked> 🔤 Nombres de lugares</label>
+              <label><input type="checkbox" id="tg-roofs" checked> 🏠 Techos</label>
+              <label><input type="checkbox" id="tg-shadows" checked> 🌗 Sombras</label>
+            </div>
+
+            <aside id="lab-inspector" class="lab-inspector" aria-live="polite"></aside>
+            <div id="contagion-card" class="contagion-card"></div>
+            <aside id="tour-panel" class="tour-panel"></aside>
+            <div id="lab-toast" class="lab-toast"></div>
+            <div class="lab-hint">Arrastra para girar · clic derecho/Shift para mover · rueda para acercar · clic en una persona para ver su ficha</div>
+          </div>
+
+          <div class="sim-legend lab-legend">
+            <div class="legend-item"><span class="lg lg-s">🙂</span><b>S</b> Sano</div>
+            <div class="legend-item"><span class="lg lg-e">?</span><b>E</b> Incubando</div>
+            <div class="legend-item"><span class="lg lg-i">🦠</span><b>I</b> Infectado (tos, fiebre, cansancio…)</div>
+            <div class="legend-item"><span class="lg lg-h">✚</span>Grave / hospital</div>
+            <div class="legend-item"><span class="lg lg-r">✓</span><b>R</b> Recuperado</div>
+            <div class="legend-item"><span class="lg lg-d">🕯️</span><b>D</b> Memorial</div>
+            <div class="legend-item"><span class="lg lg-v">🛡️</span><b>V</b> Vacunado</div>
+            <div class="legend-item"><span class="lg lg-q">⌂</span>Aislado</div>
+          </div>
+
+          <div class="didactic-row">
+            <div class="vis-card">
+              <div class="vis-header"><div class="vis-title">🧠 ¿Qué está pasando? <small>cada evento con su matemática</small></div></div>
+              <div id="event-feed" class="event-feed"></div>
+            </div>
+            <div class="vis-card">
+              <div class="vis-header"><div class="vis-title">🎓 Conceptos clave</div></div>
+              <div id="concepts-panel" class="concepts-panel"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== MAPA 2D ===================== -->
+    <section class="module" id="mod-map" data-module-panel="map">
+      <div class="map-layout">
+        <div class="map-stage"><canvas id="plan-canvas" class="plan-canvas"></canvas></div>
+        <aside class="map-side">
+          <h3>🗺️ Mapa epidemiológico</h3>
+          <div class="map-time">
+            <div class="mt-row"><b id="map-day-label">En vivo</b><button id="map-live" class="btn-sim btn-small active">● En vivo</button></div>
+            <input type="range" id="map-day" class="slider-input" min="0" max="0" value="0" title="Revisar la ciudad en un día pasado">
+            <small>Arrastra para revisar cualquier día (evolución temporal).</small>
+          </div>
+          <div class="map-layers">
+            <label><input type="checkbox" data-maplayer="heat" checked> 🔥 Mapa de calor de contagios</label>
+            <label><input type="checkbox" data-maplayer="people" checked> 👥 Personas por estado</label>
+            <label><input type="checkbox" data-maplayer="density"> 🟣 Densidad de infectados</label>
+            <label><input type="checkbox" data-maplayer="routes" checked> 🔗 Rutas de transmisión</label>
+            <label><input type="checkbox" data-maplayer="contacts" checked> 👆 Contactos del seleccionado</label>
+            <label><input type="checkbox" data-maplayer="vectors" checked> 🦟 Vectores</label>
+            <label><input type="checkbox" data-maplayer="sources" checked> 💧 Fuentes contaminadas</label>
+            <label><input type="checkbox" data-maplayer="labels" checked> 🔤 Lugares</label>
+          </div>
+          <div id="map-stats" class="map-stats"></div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- ===================== MODELOS ===================== -->
+    <section class="module" id="mod-models" data-module-panel="models">
+      <div id="math-explorer" class="math-explorer"></div>
+      <details class="panel-details">
+        <summary>📚 Teoría completa del modelo (deducciones de R₀, H<sub>IT</sub> y RK4)</summary>
+        <div id="math-container"></div>
+      </details>
+    </section>
+
+    <!-- ===================== GRÁFICAS ===================== -->
+    <section class="module" id="mod-charts" data-module-panel="charts">
+      <section class="kpi-section">
+        <div class="kpi-grid">
+          <div class="kpi-card kpi-red"><div class="kpi-label">🔴 Infectados activos · Agentes</div><div class="kpi-value" id="kpi-active-infected-2">0</div><div class="kpi-sub" id="kpi-active-sub">Estocástico</div></div>
+          <div class="kpi-card kpi-amber"><div class="kpi-label">🏔️ Pico previsto · EDO</div><div class="kpi-value" id="kpi-peak">-</div><div class="kpi-sub">Determinista, N = 100 000</div></div>
+          <div class="kpi-card"><div class="kpi-label">⚫ Fallecidos totales · EDO</div><div class="kpi-value" id="kpi-total-deaths">0</div><div class="kpi-sub">Mortalidad acumulada prevista</div></div>
+          <div class="kpi-card kpi-purple"><div class="kpi-label">📈 Rₜ · EDO (día actual)</div><div class="kpi-value" id="kpi-rt">2.50</div><div id="kpi-rt-status" class="rt-badge rt-expanding">Brote en expansión</div></div>
+          <div class="kpi-card kpi-emerald"><div class="kpi-label">🏥 Ocupación hospitalaria · Agentes</div><div class="kpi-value" id="kpi-hospital-status">0</div><div class="progress-bar-container"><div id="kpi-hospital-bar" class="progress-bar-fill"></div></div></div>
+        </div>
+      </section>
+      <div class="vis-card" id="card-chart-canvas">
+        <div class="vis-header">
+          <div class="vis-title">📈 Solución RK4 del sistema de EDO <small>personas vs tiempo (días) · determinista · N = 100 000</small></div>
+          <div class="vis-actions">
+            <button id="btn-chart-compartments" class="btn-pill-small active">Compartimentos S-E-I-R-D</button>
+            <button id="btn-chart-rt" class="btn-pill-small">Rₜ(t)</button>
+          </div>
+        </div>
+        <div class="canvas-wrapper" id="chart-canvas-wrapper"><canvas id="chart-canvas" class="canvas-element"></canvas></div>
+        <div id="ode-insight" class="insight"></div>
+      </div>
+    </section>
+
+    <!-- ===================== EDO vs AGENTES ===================== -->
+    <section class="module" id="mod-compare" data-module-panel="compare">
+      <div class="vis-card" id="card-compare">
+        <div class="vis-header"><div class="vis-title">⚖️ Agentes (puntos, estocástico) vs EDO (líneas, determinista) con la misma N</div></div>
+        <div class="canvas-wrapper" id="compare-canvas-wrapper"><canvas id="compare-canvas" class="canvas-element"></canvas></div>
+        <div id="compare-summary" class="compare-summary"></div>
+      </div>
+      <div class="explain-grid">
+        <div class="explain-card"><h4>🎯 ¿Qué se compara?</h4><p>La EDO se resuelve con la <b>misma población</b> y las <b>mismas condiciones iniciales</b> que los agentes. Las líneas son el <b>promedio determinista</b>; los puntos, <b>una realización aleatoria</b>.</p></div>
+        <div class="explain-card"><h4>🎲 ¿Por qué no coinciden?</h4><p>Azar con pocos casos, contagio agrupado en hogares, rutinas, duraciones Erlang y medidas que sólo existen en los agentes (mascarillas, distanciamiento, ventilación…).</p></div>
+        <div class="explain-card"><h4>🔁 Experimenta</h4><p>Pulsa <b>🎲 Nueva realización aleatoria</b> varias veces: verás que los puntos cambian alrededor de las líneas. Haz clic en la gráfica para ver la ciudad ese día en el mapa 2D.</p></div>
+      </div>
+    </section>
+
+    <!-- ===================== APRENDER ===================== -->
+    <section class="module" id="mod-learn" data-module-panel="learn">
+      <div class="learn-hero">
+        <div>
+          <span class="hero-kicker">Modo guiado</span>
+          <h2>🎓 Aprender la epidemia</h2>
+          <p>Un recorrido de 10 etapas sobre la simulación real. En cada etapa: una animación en la ciudad, una explicación breve, la fórmula con sus variables y una pregunta de comprensión. Puedes repetir cualquier etapa.</p>
+          <button id="btn-start-tour" class="cta primary">▶ Comenzar el recorrido</button>
+        </div>
+        <ol class="learn-steps">
+          <li>Una comunidad sana</li><li>El patógeno y R₀</li><li>El paciente inicial</li><li>¿Cómo se transmite?</li><li>El primer contagio</li>
+          <li>La ecuación del contagio</li><li>Propagación del brote</li><li>La curva epidemiológica</li><li>El pico de infección</li><li>Recuperación y fin del brote</li>
+        </ol>
+      </div>
+    </section>
+  </main>
+
+  <!-- ===================== Ficha del patógeno (modal) ===================== -->
+  <div class="pm-root" id="pathogen-modal" role="dialog" aria-modal="true" aria-label="Ficha del patógeno">
+    <div class="pm-card">
+      <button class="pm-x" data-pm="close" title="Cerrar">✕</button>
+      <div class="pm-left">
+        <div class="pm-viewer" id="pm-viewer"></div>
+        <div class="pm-viewer-caption">Ilustración conceptual</div>
+        <div class="pm-diagram-title">Mecanismo de transmisión</div>
+        <canvas class="pm-diagram" id="pm-diagram"></canvas>
+      </div>
+      <div class="pm-right">
+        <div class="pm-info"></div>
+        <div class="pm-actions">
+          <button class="cta primary" data-pm="simulate">🏙️ Simular en la ciudad</button>
+          <button class="cta" data-pm="learn">🎓 Aprender con esta enfermedad</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="app-footer">
+    <div class="footer-content">
+      <div><strong>EpiDynamics 6.0</strong> — Matemáticas IV: modelado matemático y ecuaciones diferenciales</div>
+      <div>RK4 · SIR · SIS · SEIR · SIRD · SEIRD · Agentes 3D con Three.js (MIT) · Personajes y escenario procedurales</div>
+    </div>
+  </footer>
+
+  <!-- Three.js r169 (MIT) convertido a script clásico para funcionar con doble clic (file://) -->
+  <script src="js/vendor/three.iife.min.js"></script>
+  <!-- Bundle de la aplicación (generado con: npm run build) -->
+  <script src="js/bundle.js"></script>
+</body>
+</html>

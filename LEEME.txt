@@ -1,0 +1,27 @@
+EpiDynamics 6.0 - Laboratorio Virtual de Propagacion de Enfermedades
+Matematicas IV - Ecuaciones diferenciales y sistemas dinamicos
+=====================================================================
+
+COMO ABRIR EL SIMULADOR
+  1. Descomprime todo el ZIP (clic derecho > "Extraer todo"). No lo abras desde dentro del ZIP.
+  2. Haz doble clic en  ABRIR_SIMULADOR.bat   (Windows)
+     o en             ABRIR_SIMULADOR.html  (Windows, Mac o Linux).
+  3. Se abre en el navegador (Chrome o Edge recomendados). Funciona sin instalar nada
+     y sin Internet (solo las formulas usan Internet para verse mas bonitas).
+
+VERSION EN LINEA
+  https://alejostone1.github.io/Simulacion_Propagacion/
+
+CONTENIDO
+  ABRIR_SIMULADOR.bat / .html   -> abren el proyecto
+  PropagacionDeUnaEnfermedad\    -> proyecto completo (codigo fuente, documentacion y recursos)
+      index.html                -> pagina principal del simulador
+      README.md                 -> manual completo y fundamento matematico
+      docs\                      -> arquitectura y registro de cambios
+      js\, css\                  -> codigo fuente
+      tools\                     -> pruebas (npm test) y utilidades
+
+PARA DESARROLLADORES (opcional, requiere Node.js)
+  Dentro de PropagacionDeUnaEnfermedad:
+    npm run build   -> regenera jsundle.js despues de editar el codigo
+    npm test        -> prueba automatica del motor con las 15 enfermedades

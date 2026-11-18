@@ -1,0 +1,12 @@
+{
+  "name": "epidynamics",
+  "version": "5.0.0",
+  "private": true,
+  "description": "Laboratorio virtual de propagación epidemiológica: agentes 3D (Three.js) + EDO SIR/SEIR/SEIRD con RK4. Matemáticas 4.",
+  "scripts": {
+    "build": "node build.js",
+    "test": "node --no-warnings tools/test-engine.mjs",
+    "start": "npx serve ."
+  },
+  "license": "MIT"
+}
